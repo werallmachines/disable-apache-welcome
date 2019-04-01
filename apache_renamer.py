@@ -6,7 +6,7 @@ out sections of welcome.conf to remove verbose
 Apache welcome page
 '''
 
-import paramiko, os, re, argparse
+import fabric, invoke, os, re, argparse
 
 servers = []
 file_out = ""
@@ -20,23 +20,21 @@ class ServerList():
 
 def connect(hostname, username, password):
     # don't catch exceptions here, let them propagate up to main
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(hostname=hostname, username=username, password=password)
+    ssh_client = fabric.Connection(username@hostname, password="8008weiD!!")
+    sudopass = invoke.Responder(
+            pattern=r'\[sudo\] password for ', + username,
+            response=password + '\n',
+    )
+    ssh_client.run('su -', pty=True, watchers=[sudopass])
 
     return ssh_client
 
 def nav_n_edit(ssh_client):
     try:
-        #(stdin, stdout, stderr) = ssh_client.exec_command("sudo -H rootsh -i")
-        #stdin.write(credentials[1] + "\n")
-        # this will make the root directory visible with directory listing
-        #(stdin, stdout, stderr) = ssh_client.exec_command("mv /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/welcome.conf.bak")
-        (stdin, stdout, stderr) = ssh_client.exec_command("sed -i 's/Alias/#Alias/g' /etc/httpd/conf.d/welcome.conf")
-
+        ssh_client.run('')
         return True
-    except:
-        return False
+    except Exception as e:
+        print e
 
 def parse_args():
     global preparsed_server_list
@@ -64,8 +62,8 @@ def main():
     for server in servers.server_list:
         try:
             try:
-                s = connect(server, credentials[0], credentials[1])
-                c = nav_n_edit(s)
+                ssh_client = connect(server, credentials[0], credentials[1])
+                c = nav_n_edit(ssh_client)
                 if c:
                     print "[+] " + server + " ---> Change made successfully"
                     fo.write("[+] " + server + " ---> Change made successfully")
